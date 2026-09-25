@@ -2,7 +2,6 @@
 
 **8-Ball Pool 3D** is a high-performance Python billiards simulation using Pygame and Pymunk. It features strict BCA rules, a regulation 2:1 table, dynamic raycast aiming, and advanced cue ball spin. Custom asset caching ensures a flawless 60 FPS experience on high-res displays, all packaged into a single click-to-play executable.
 
-![Game Screenshot](link-to-your-screenshot-here.png)
 
 ## ✨ Features
 
