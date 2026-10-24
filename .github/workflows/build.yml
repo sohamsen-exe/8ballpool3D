@@ -30,18 +30,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install pygame pymunk pyinstaller
 
-    - name: Build with PyInstaller
-      run: pyinstaller --onefile --windowed pool.py
+    - name: Build with PyInstaller (Windows)
+      if: matrix.os == 'windows-latest'
+      run: pyinstaller --onefile --windowed --name "8-Ball-Pool-3D" --icon=icon.ico pool.py
+
+    - name: Build with PyInstaller (macOS)
+      if: matrix.os == 'macos-latest'
+      run: pyinstaller --onefile --windowed --name "8-Ball-Pool-3D" --icon=icon.icns pool.py
 
     - name: Prepare Windows Executable
       if: matrix.os == 'windows-latest'
-      run: ren dist\pool.exe 8-Ball-Pool-Windows.exe
+      run: ren dist\8-Ball-Pool-3D.exe 8-Ball-Pool-Windows.exe
 
     - name: Prepare macOS App Bundle
       if: matrix.os == 'macos-latest'
       run: |
         cd dist
-        zip -r 8-Ball-Pool-macOS.zip pool.app
+        zip -r 8-Ball-Pool-macOS.zip 8-Ball-Pool-3D.app
 
     - name: Upload to GitHub Release
       uses: softprops/action-gh-release@v2
