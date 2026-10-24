@@ -67,10 +67,22 @@ is_dragging_spin = False
 large_spin_center = (VIRTUAL_W // 2, VIRTUAL_H // 2)
 large_spin_radius = 180
 
-pause_btn = pygame.Rect(VIRTUAL_W - 190, 25, 160, 45)
-close_spin_btn = pygame.Rect(VIRTUAL_W // 2 - 100, VIRTUAL_H // 2 + 220, 200, 60)
+# --- Menu Buttons ---
 play_main_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 40, 400, 100)
 quit_main_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 100, 400, 100)
+
+pvp_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 80, 400, 80)
+vs_ai_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 20, 400, 80)
+back_mode_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 120, 400, 80)
+
+pause_btn = pygame.Rect(VIRTUAL_W - 190, 25, 160, 45)
+close_spin_btn = pygame.Rect(VIRTUAL_W // 2 - 100, VIRTUAL_H // 2 + 220, 200, 60)
+
+# --- REPLACED: New Game Mode Buttons ---
+pvp_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 80, 400, 80)
+vs_ai_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 20, 400, 80)
+quit_main_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 120, 400, 80)
+
 resume_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 120, 400, 80)
 restart_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 20, 400, 80)
 quit_menu_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 80, 400, 80)
@@ -170,6 +182,7 @@ def change_state(new_state):
 
 # --- Game State Variables ---
 game_state = "MENU"
+game_mode = "PVP"
 p1_name = "Player 1"
 p2_name = "Player 2"
 active_input = 1 
@@ -421,8 +434,15 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if game_state == "NAMES":
                 if event.key == pygame.K_RETURN:
-                    if active_input == 1 and p1_name.strip() != "": active_input = 2
-                    elif active_input == 2 and p2_name.strip() != "": setup_balls(); change_state("PLAYING")
+                    if active_input == 1 and p1_name.strip() != "": 
+                        if game_mode == "PvAI":  # Skip P2 input if playing against bot
+                            setup_balls()
+                            change_state("PLAYING")
+                        else:
+                            active_input = 2
+                    elif active_input == 2 and p2_name.strip() != "": 
+                        setup_balls()
+                        change_state("PLAYING")
                 elif event.key == pygame.K_BACKSPACE:
                     if active_input == 1: p1_name = p1_name[:-1]
                     else: p2_name = p2_name[:-1]
@@ -431,7 +451,9 @@ while running:
                         if active_input == 1 and len(p1_name) < 12: p1_name += event.unicode
                         elif active_input == 2 and len(p2_name) < 12: p2_name += event.unicode
             elif event.key == pygame.K_ESCAPE:
-                if game_state == "PLAYING" and game_over_msg == "":
+                if game_state in ["MODE_SELECT", "NAMES"]:
+                    change_state("MENU")
+                elif game_state == "PLAYING" and game_over_msg == "":
                     if spin_popup_active: 
                         spin_popup_active = False
                     else: 
@@ -442,64 +464,66 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "MENU":
                 if play_main_btn.collidepoint(mouse_x, mouse_y):
+                    change_state("MODE_SELECT")
+                elif quit_main_btn.collidepoint(mouse_x, mouse_y): 
+                    running = False
+
+            elif game_state == "MODE_SELECT":
+                if pvp_btn.collidepoint(mouse_x, mouse_y):
+                    game_mode = "PVP"
                     p1_name, p2_name, active_input = "", "", 1 
                     change_state("NAMES")
-                elif quit_main_btn.collidepoint(mouse_x, mouse_y): running = False
+                elif vs_ai_btn.collidepoint(mouse_x, mouse_y):
+                    game_mode = "PvAI"
+                    p1_name, p2_name, active_input = "", "AI Bot", 1 
+                    change_state("NAMES")
+                elif back_mode_btn.collidepoint(mouse_x, mouse_y):
+                    change_state("MENU")
 
             elif game_state == "NAMES":
                 if pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 - 120, 600, 80).collidepoint(mouse_x, mouse_y): active_input = 1
-                elif pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 + 40, 600, 80).collidepoint(mouse_x, mouse_y): active_input = 2
+                elif game_mode == "PVP" and pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 + 40, 600, 80).collidepoint(mouse_x, mouse_y): active_input = 2
                 elif pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 200, 400, 100).collidepoint(mouse_x, mouse_y):
                     if p1_name.strip() == "": p1_name = "Player 1"
-                    if p2_name.strip() == "": p2_name = "Player 2"
+                    if game_mode == "PVP" and p2_name.strip() == "": p2_name = "Player 2"
                     setup_balls(); change_state("PLAYING")
 
             elif game_state == "PAUSED":
-                if resume_btn.collidepoint(mouse_x, mouse_y): 
-                    game_state = "PLAYING"
-                elif restart_btn.collidepoint(mouse_x, mouse_y): 
-                    setup_balls()
-                    game_state = "PLAYING"
-                elif quit_menu_btn.collidepoint(mouse_x, mouse_y): 
-                    change_state("MENU")  # Keeps the smooth fade back to main menu
+                if resume_btn.collidepoint(mouse_x, mouse_y): change_state("PLAYING")
+                elif restart_btn.collidepoint(mouse_x, mouse_y): setup_balls(); change_state("PLAYING")
+                elif quit_menu_btn.collidepoint(mouse_x, mouse_y): change_state("MENU")
 
             elif game_state == "PLAYING":
                 if game_over_msg != "":
-                    if win_restart_btn.collidepoint(mouse_x, mouse_y):
-                        setup_balls()
-                        change_state("PLAYING")
-                    elif win_menu_btn.collidepoint(mouse_x, mouse_y):
-                        change_state("MENU")
+                    if win_restart_btn.collidepoint(mouse_x, mouse_y): setup_balls(); change_state("PLAYING")
+                    elif win_menu_btn.collidepoint(mouse_x, mouse_y): change_state("MENU")
                 elif spin_popup_active:
-                    if close_spin_btn.collidepoint(mouse_x, mouse_y):
-                        spin_popup_active = False
+                    if close_spin_btn.collidepoint(mouse_x, mouse_y): spin_popup_active = False
                     elif math.hypot(mouse_x - large_spin_center[0], mouse_y - large_spin_center[1]) <= large_spin_radius:
                         is_dragging_spin = True
                         spin_x = (mouse_x - large_spin_center[0]) / large_spin_radius
                         spin_y = (mouse_y - large_spin_center[1]) / large_spin_radius
-                    else:
-                        spin_popup_active = False
+                    else: spin_popup_active = False
                 else:
                     if pause_btn.collidepoint(mouse_x, mouse_y): 
                         game_state = "PAUSED"
-                    elif math.hypot(mouse_x - spin_ui_center[0], mouse_y - spin_ui_center[1]) <= spin_ui_radius:
-                        spin_popup_active = True 
-                    elif game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_body.velocity.length < 2 and not shot_taken:
-                        if ball_in_hand and math.hypot(mouse_x - cue_body.position.x, mouse_y - cue_body.position.y) <= ball_radius * 3:
-                            is_dragging_cue = True
-                        else:
-                            is_charging = True
-                            charge_start_pos = (mouse_x, mouse_y)
+                    elif not (game_mode == "PvAI" and turn == 2): # BLOCK USER CLICKS IF AI TURN
+                        if math.hypot(mouse_x - spin_ui_center[0], mouse_y - spin_ui_center[1]) <= spin_ui_radius:
+                            spin_popup_active = True 
+                        elif game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_body.velocity.length < 2 and not shot_taken:
+                            if ball_in_hand and math.hypot(mouse_x - cue_body.position.x, mouse_y - cue_body.position.y) <= ball_radius * 3:
+                                is_dragging_cue = True
+                            else:
+                                is_charging = True
+                                charge_start_pos = (mouse_x, mouse_y)
                 
         elif event.type == pygame.MOUSEBUTTONUP:
-            if game_state == "PLAYING":
-                if is_dragging_spin:
-                    is_dragging_spin = False
+            if game_state == "PLAYING" and not (game_mode == "PvAI" and turn == 2): # BLOCK USER RELEASE IF AI TURN
+                if is_dragging_spin: is_dragging_spin = False
                 elif is_dragging_cue: is_dragging_cue = False 
                 elif is_charging:
                     if current_power > 100: 
                         force_vec = (current_power * math.cos(aim_angle), current_power * math.sin(aim_angle))
-                        
                         offset_x = spin_x * (ball_radius * 0.9)
                         offset_y = spin_y * (ball_radius * 0.9)
                         up = (math.cos(aim_angle - math.pi/2), math.sin(aim_angle - math.pi/2))
@@ -517,7 +541,7 @@ while running:
                         
                     is_charging, current_power = False, 0
 
-    if game_state in ["MENU", "NAMES"]:
+    if game_state in ["MENU", "MODE_SELECT", "NAMES"]:
         game_surface.fill(MENU_BG) 
         pygame.draw.rect(game_surface, WOOD_BROWN, (30, 30, VIRTUAL_W - 60, VIRTUAL_H - 60), 20, border_radius=30)
         
@@ -529,9 +553,23 @@ while running:
 
             pygame.draw.rect(game_surface, BTN_GREEN, play_main_btn, border_radius=20)
             game_surface.blit(button_font.render("PLAY GAME", True, WHITE), button_font.render("PLAY GAME", True, WHITE).get_rect(center=play_main_btn.center))
+            
             pygame.draw.rect(game_surface, BTN_RED, quit_main_btn, border_radius=20)
             game_surface.blit(button_font.render("QUIT", True, WHITE), button_font.render("QUIT", True, WHITE).get_rect(center=quit_main_btn.center))
             
+        elif game_state == "MODE_SELECT":
+            title = title_font.render("SELECT MODE", True, WHITE)
+            game_surface.blit(title, title.get_rect(center=(VIRTUAL_W//2, VIRTUAL_H//2 - 240)))
+
+            pygame.draw.rect(game_surface, BTN_GREEN, pvp_btn, border_radius=20)
+            game_surface.blit(button_font.render("PLAYER VS PLAYER", True, WHITE), button_font.render("PLAYER VS PLAYER", True, WHITE).get_rect(center=pvp_btn.center))
+            
+            pygame.draw.rect(game_surface, BTN_BLUE, vs_ai_btn, border_radius=20)
+            game_surface.blit(button_font.render("PLAYER VS AI", True, WHITE), button_font.render("PLAYER VS AI", True, WHITE).get_rect(center=vs_ai_btn.center))
+            
+            pygame.draw.rect(game_surface, BTN_RED, back_mode_btn, border_radius=20)
+            game_surface.blit(button_font.render("BACK", True, WHITE), button_font.render("BACK", True, WHITE).get_rect(center=back_mode_btn.center))
+
         elif game_state == "NAMES":
             title = ui_font.render("ENTER PLAYER NAMES", True, WHITE)
             game_surface.blit(title, title.get_rect(center=(VIRTUAL_W//2, VIRTUAL_H//2 - 240)))
@@ -541,10 +579,11 @@ while running:
             game_surface.blit(ui_font.render("P1 Name:", True, WHITE), (p1_box.x - 200, p1_box.y + 20))
             game_surface.blit(ui_font.render(p1_name + ("_" if active_input == 1 else ""), True, BLACK), (p1_box.x + 20, p1_box.y + 20))
 
-            p2_box = pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 + 40, 600, 80)
-            pygame.draw.rect(game_surface, WHITE if active_input == 2 else GRAY, p2_box, border_radius=10)
-            game_surface.blit(ui_font.render("P2 Name:", True, WHITE), (p2_box.x - 200, p2_box.y + 20))
-            game_surface.blit(ui_font.render(p2_name + ("_" if active_input == 2 else ""), True, BLACK), (p2_box.x + 20, p2_box.y + 20))
+            if game_mode == "PVP":
+                p2_box = pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 + 40, 600, 80)
+                pygame.draw.rect(game_surface, WHITE if active_input == 2 else GRAY, p2_box, border_radius=10)
+                game_surface.blit(ui_font.render("P2 Name:", True, WHITE), (p2_box.x - 200, p2_box.y + 20))
+                game_surface.blit(ui_font.render(p2_name + ("_" if active_input == 2 else ""), True, BLACK), (p2_box.x + 20, p2_box.y + 20))
 
             start_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 200, 400, 100)
             pygame.draw.rect(game_surface, BTN_GREEN, start_btn, border_radius=20)
@@ -552,22 +591,60 @@ while running:
 
     elif game_state in ["PLAYING", "PAUSED"]:
         if game_state == "PLAYING":
-            if is_dragging_spin:
-                dx = mouse_x - large_spin_center[0]
-                dy = mouse_y - large_spin_center[1]
-                dist = math.hypot(dx, dy)
-                if dist > large_spin_radius:
-                    dx = dx / dist * large_spin_radius
-                    dy = dy / dist * large_spin_radius
-                spin_x = dx / large_spin_radius
-                spin_y = dy / large_spin_radius
+            is_ai_turn = (game_mode == "PvAI" and turn == 2)
 
-            if game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_body.velocity.length < 2 and not shot_taken and not is_dragging_cue and not spin_popup_active:
-                if not is_charging: aim_angle = math.atan2(mouse_y - cue_body.position.y, mouse_x - cue_body.position.x)
-            else: is_charging = False 
+            # --- AI BOT EXECUTION LOGIC ---
+            if is_ai_turn and game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_is_stopped and not shot_taken:
+                if not hasattr(cue_body, 'ai_timer'): cue_body.ai_timer = 60 # 1 second delay
+                
+                if cue_body.ai_timer > 0:
+                    cue_body.ai_timer -= 1 # Let the AI "think"
+                else:
+                    cue_body.ai_timer = 60
+                    # 1. Determine legal targets
+                    target_nums = []
+                    curr_score = len([b for b in global_pocketed_balls if b > 8])
+                    if p2_type is None: target_nums = [i for i in range(1, 16) if i != 8 and i not in global_pocketed_balls]
+                    elif curr_score < 7: target_nums = [i for i in range(9, 16) if i not in global_pocketed_balls]
+                    else: target_nums = [8]
+                    
+                    # 2. Find the absolute closest legal ball
+                    best_ball, min_dist = None, 9999
+                    for i, (b, s) in enumerate(balls):
+                        if ball_props[i][2] in target_nums:
+                            dist = math.hypot(b.position.x - cue_body.position.x, b.position.y - cue_body.position.y)
+                            if dist < min_dist:
+                                min_dist, best_ball = dist, b
+                                
+                    # 3. Calculate strike angle and apply force
+                    if best_ball:
+                        ai_aim_angle = math.atan2(best_ball.position.y - cue_body.position.y, best_ball.position.x - cue_body.position.x)
+                        power = 6000 if is_break_shot else 2500
+                        force_vec = (power * math.cos(ai_aim_angle), power * math.sin(ai_aim_angle))
+                        cue_body.apply_impulse_at_world_point(force_vec, cue_body.position)
+                    else:
+                        cue_body.apply_impulse_at_world_point((2000, 0), cue_body.position) # Fallback safety
+                        
+                    shot_taken, ball_in_hand = True, False
 
-            if is_charging:
-                current_power = min(math.hypot(mouse_x - charge_start_pos[0], mouse_y - charge_start_pos[1]) * 30, 6000) 
+            # --- USER INPUT LOGIC ---
+            if not is_ai_turn:
+                if is_dragging_spin:
+                    dx = mouse_x - large_spin_center[0]
+                    dy = mouse_y - large_spin_center[1]
+                    dist = math.hypot(dx, dy)
+                    if dist > large_spin_radius:
+                        dx = dx / dist * large_spin_radius
+                        dy = dy / dist * large_spin_radius
+                    spin_x = dx / large_spin_radius
+                    spin_y = dy / large_spin_radius
+
+                if game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_body.velocity.length < 2 and not shot_taken and not is_dragging_cue and not spin_popup_active:
+                    if not is_charging: aim_angle = math.atan2(mouse_y - cue_body.position.y, mouse_x - cue_body.position.x)
+                else: is_charging = False 
+
+                if is_charging:
+                    current_power = min(math.hypot(mouse_x - charge_start_pos[0], mouse_y - charge_start_pos[1]) * 30, 6000) 
 
             # Kept exactly inside inner rail Y bounds 240-840
             if is_dragging_cue and not spin_popup_active:
