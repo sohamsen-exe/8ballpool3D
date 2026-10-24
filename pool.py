@@ -12,7 +12,7 @@ RENDER_FLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
 
 game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
-pygame.display.set_caption("8 Ball Pool 3D")
+pygame.display.set_caption("8-Ball Pool 3D")
 clock = pygame.time.Clock()
 
 font = pygame.font.SysFont(None, 32, bold=True)
@@ -45,7 +45,6 @@ BALL_COLORS = [
 ]
 
 # --- Game Variables ---
-game_state = "MENU" 
 ball_radius = 20
 pocket_radius = 38
 balls = []           
@@ -80,7 +79,6 @@ win_restart_btn = pygame.Rect(VIRTUAL_W//2 - 340, VIRTUAL_H//2 + 20, 320, 80)
 win_menu_btn = pygame.Rect(VIRTUAL_W//2 + 20, VIRTUAL_H//2 + 20, 320, 80)
 
 # --- PERFECT SYMMETRICAL 2:1 TABLE GEOMETRY (Shifted Down 80px) ---
-# Play Area: Exactly 1200 x 600. Center is now (800, 540).
 pockets = [(175, 215), (800, 215), (1425, 215), (175, 865), (800, 865), (1425, 865)]
 pocket_shapes = [] 
 
@@ -155,7 +153,23 @@ def build_static_table_cache():
 
 build_static_table_cache()
 
+# --- Transition & Fade Variables ---
+transition_state = "FADE_IN"
+next_game_state = ""
+ui_alpha = 255
+fade_speed = 15
+
+fade_overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
+fade_overlay.fill((0, 0, 0))
+
+def change_state(new_state):
+    global transition_state, next_game_state
+    if transition_state == "NONE":
+        next_game_state = new_state
+        transition_state = "FADE_OUT"
+
 # --- Game State Variables ---
+game_state = "MENU"
 p1_name = "Player 1"
 p2_name = "Player 2"
 active_input = 1 
@@ -366,6 +380,19 @@ setup_balls()
 # --- Game Loop ---
 running = True
 while running:
+    # 1. Process Fade Transitions
+    if transition_state == "FADE_IN":
+        ui_alpha -= fade_speed
+        if ui_alpha <= 0:
+            ui_alpha = 0
+            transition_state = "NONE"
+    elif transition_state == "FADE_OUT":
+        ui_alpha += fade_speed
+        if ui_alpha >= 255:
+            ui_alpha = 255
+            game_state = next_game_state
+            transition_state = "FADE_IN"
+
     scale_w = current_width / VIRTUAL_W
     scale_h = current_height / VIRTUAL_H
     scale = min(scale_w, scale_h) 
@@ -382,6 +409,11 @@ while running:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT: running = False
+        
+        # Block inputs if the screen is currently fading
+        if transition_state != "NONE" and event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            continue
+            
         elif event.type == pygame.VIDEORESIZE:
             current_width, current_height = event.w, event.h
             screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
@@ -390,7 +422,7 @@ while running:
             if game_state == "NAMES":
                 if event.key == pygame.K_RETURN:
                     if active_input == 1 and p1_name.strip() != "": active_input = 2
-                    elif active_input == 2 and p2_name.strip() != "": setup_balls(); game_state = "PLAYING"
+                    elif active_input == 2 and p2_name.strip() != "": setup_balls(); change_state("PLAYING")
                 elif event.key == pygame.K_BACKSPACE:
                     if active_input == 1: p1_name = p1_name[:-1]
                     else: p2_name = p2_name[:-1]
@@ -400,15 +432,18 @@ while running:
                         elif active_input == 2 and len(p2_name) < 12: p2_name += event.unicode
             elif event.key == pygame.K_ESCAPE:
                 if game_state == "PLAYING" and game_over_msg == "":
-                    if spin_popup_active: spin_popup_active = False
-                    else: game_state = "PAUSED"
-                elif game_state == "PAUSED": game_state = "PLAYING"
+                    if spin_popup_active: 
+                        spin_popup_active = False
+                    else: 
+                        game_state = "PAUSED"
+                elif game_state == "PAUSED": 
+                    game_state = "PLAYING"
                     
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "MENU":
                 if play_main_btn.collidepoint(mouse_x, mouse_y):
                     p1_name, p2_name, active_input = "", "", 1 
-                    game_state = "NAMES"
+                    change_state("NAMES")
                 elif quit_main_btn.collidepoint(mouse_x, mouse_y): running = False
 
             elif game_state == "NAMES":
@@ -417,20 +452,24 @@ while running:
                 elif pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 200, 400, 100).collidepoint(mouse_x, mouse_y):
                     if p1_name.strip() == "": p1_name = "Player 1"
                     if p2_name.strip() == "": p2_name = "Player 2"
-                    setup_balls(); game_state = "PLAYING"
+                    setup_balls(); change_state("PLAYING")
 
             elif game_state == "PAUSED":
-                if resume_btn.collidepoint(mouse_x, mouse_y): game_state = "PLAYING"
-                elif restart_btn.collidepoint(mouse_x, mouse_y): setup_balls(); game_state = "PLAYING"
-                elif quit_menu_btn.collidepoint(mouse_x, mouse_y): game_state = "MENU"
+                if resume_btn.collidepoint(mouse_x, mouse_y): 
+                    game_state = "PLAYING"
+                elif restart_btn.collidepoint(mouse_x, mouse_y): 
+                    setup_balls()
+                    game_state = "PLAYING"
+                elif quit_menu_btn.collidepoint(mouse_x, mouse_y): 
+                    change_state("MENU")  # Keeps the smooth fade back to main menu
 
             elif game_state == "PLAYING":
                 if game_over_msg != "":
                     if win_restart_btn.collidepoint(mouse_x, mouse_y):
                         setup_balls()
-                        game_state = "PLAYING"
+                        change_state("PLAYING")
                     elif win_menu_btn.collidepoint(mouse_x, mouse_y):
-                        game_state = "MENU"
+                        change_state("MENU")
                 elif spin_popup_active:
                     if close_spin_btn.collidepoint(mouse_x, mouse_y):
                         spin_popup_active = False
@@ -441,7 +480,8 @@ while running:
                     else:
                         spin_popup_active = False
                 else:
-                    if pause_btn.collidepoint(mouse_x, mouse_y): game_state = "PAUSED"
+                    if pause_btn.collidepoint(mouse_x, mouse_y): 
+                        game_state = "PAUSED"
                     elif math.hypot(mouse_x - spin_ui_center[0], mouse_y - spin_ui_center[1]) <= spin_ui_radius:
                         spin_popup_active = True 
                     elif game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_body.velocity.length < 2 and not shot_taken:
@@ -846,6 +886,11 @@ while running:
             game_surface.blit(button_font.render("RESTART MATCH", True, WHITE), button_font.render("RESTART MATCH", True, WHITE).get_rect(center=restart_btn.center))
             pygame.draw.rect(game_surface, BTN_RED, quit_menu_btn, border_radius=20)
             game_surface.blit(button_font.render("QUIT TO MENU", True, WHITE), button_font.render("QUIT TO MENU", True, WHITE).get_rect(center=quit_menu_btn.center))
+
+    # --- Draw the Fade Overlay ---
+    if ui_alpha > 0:
+        fade_overlay.set_alpha(ui_alpha)
+        game_surface.blit(fade_overlay, (0, 0))
 
     screen.fill((0, 0, 0)) 
     screen.blit(pygame.transform.scale(game_surface, (scaled_w, scaled_h)), (offset_x, offset_y))
