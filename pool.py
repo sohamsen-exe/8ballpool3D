@@ -595,38 +595,194 @@ while running:
 
             # --- AI BOT EXECUTION LOGIC ---
             if is_ai_turn and game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_is_stopped and not shot_taken:
-                if not hasattr(cue_body, 'ai_timer'): cue_body.ai_timer = 60 # 1 second delay
+                if not hasattr(cue_body, 'ai_state'): 
+                    cue_body.ai_state = "THINKING"
+                    cue_body.ai_timer = 90 # 1.5 seconds to "think"
+                    cue_body.ai_target_angle = 0
+                    cue_body.ai_target_power = 0
                 
-                if cue_body.ai_timer > 0:
-                    cue_body.ai_timer -= 1 # Let the AI "think"
-                else:
-                    cue_body.ai_timer = 60
-                    # 1. Determine legal targets
-                    target_nums = []
-                    curr_score = len([b for b in global_pocketed_balls if b > 8])
-                    if p2_type is None: target_nums = [i for i in range(1, 16) if i != 8 and i not in global_pocketed_balls]
-                    elif curr_score < 7: target_nums = [i for i in range(9, 16) if i not in global_pocketed_balls]
-                    else: target_nums = [8]
-                    
-                    # 2. Find the absolute closest legal ball
-                    best_ball, min_dist = None, 9999
-                    for i, (b, s) in enumerate(balls):
-                        if ball_props[i][2] in target_nums:
-                            dist = math.hypot(b.position.x - cue_body.position.x, b.position.y - cue_body.position.y)
-                            if dist < min_dist:
-                                min_dist, best_ball = dist, b
-                                
-                    # 3. Calculate strike angle and apply force
-                    if best_ball:
-                        ai_aim_angle = math.atan2(best_ball.position.y - cue_body.position.y, best_ball.position.x - cue_body.position.x)
-                        power = 6000 if is_break_shot else 2500
-                        force_vec = (power * math.cos(ai_aim_angle), power * math.sin(ai_aim_angle))
-                        cue_body.apply_impulse_at_world_point(force_vec, cue_body.position)
+                if cue_body.ai_state == "THINKING":
+                    if cue_body.ai_timer > 0:
+                        cue_body.ai_timer -= 1
                     else:
-                        cue_body.apply_impulse_at_world_point((2000, 0), cue_body.position) # Fallback safety
-                        
-                    shot_taken, ball_in_hand = True, False
+                        # --- AI BRAIN INITIALIZATION ---
+                        target_nums = []
+                        curr_score = len([b for b in global_pocketed_balls if b > 8])
+                        if p2_type is None: target_nums = [i for i in range(1, 16) if i != 8 and i not in global_pocketed_balls]
+                        elif curr_score < 7: target_nums = [i for i in range(9, 16) if i not in global_pocketed_balls]
+                        else: target_nums = [8]
 
+                        # Helper: Mathematically check if a path is blocked by other balls
+                        def path_is_clear(start, end, ignore_bodies):
+                            sx, sy = start
+                            ex, ey = end
+                            path_len = math.hypot(ex - sx, ey - sy)
+                            if path_len == 0: return False
+                            dx, dy = (ex - sx) / path_len, (ey - sy) / path_len
+                            for b, _ in balls:
+                                if b in ignore_bodies: continue
+                                v_x, v_y = b.position.x - sx, b.position.y - sy
+                                dot = v_x * dx + v_y * dy
+                                if 0 < dot < path_len:
+                                    proj_x, proj_y = sx + dot * dx, sy + dot * dy
+                                    # 2.2 factor adds a slight buffer so it doesn't skim too closely
+                                    if math.hypot(b.position.x - proj_x, b.position.y - proj_y) < ball_radius * 2.2:
+                                        return False
+                            return True
+
+                        best_aim_target = None
+                        best_shot_quality = -9999 
+                        is_banking = False
+
+                        if is_break_shot:
+                            for i, (b, s) in enumerate(balls):
+                                if ball_props[i][2] == 1:
+                                    best_aim_target = (b.position.x, b.position.y)
+                                    break
+                        else:
+                            for i, (b, s) in enumerate(balls):
+                                if ball_props[i][2] not in target_nums: continue
+                                
+                                # 1. EVALUATE DIRECT SHOTS
+                                for px, py in pockets:
+                                    dx_p, dy_p = px - b.position.x, py - b.position.y
+                                    dist_p = math.hypot(dx_p, dy_p)
+                                    if dist_p == 0: continue
+                                    dir_px, dir_py = dx_p / dist_p, dy_p / dist_p
+                                    
+                                    ghost_x = b.position.x - dir_px * (ball_radius * 2)
+                                    ghost_y = b.position.y - dir_py * (ball_radius * 2)
+                                    
+                                    # Skip if shot is blocked by another ball
+                                    if not path_is_clear((b.position.x, b.position.y), (px, py), [b, cue_body]): continue
+                                    if not path_is_clear((cue_body.position.x, cue_body.position.y), (ghost_x, ghost_y), [b, cue_body]): continue
+                                    
+                                    dx_c, dy_c = ghost_x - cue_body.position.x, ghost_y - cue_body.position.y
+                                    dist_c = math.hypot(dx_c, dy_c)
+                                    if dist_c == 0: continue
+                                    dir_cx, dir_cy = dx_c / dist_c, dy_c / dist_c
+                                    
+                                    alignment = (dir_cx * dir_px) + (dir_cy * dir_py)
+                                    if alignment > 0.1: # Must be a valid cut angle
+                                        shot_quality = alignment - (dist_p * 0.0002)
+                                        
+                                        # Scratch Prevention (90-Degree Tangent Prediction)
+                                        cross = dir_cx * dir_py - dir_cy * dir_px
+                                        tx, ty = (-dir_py, dir_px) if cross > 0 else (dir_py, -dir_px)
+                                        scratch_risk = False
+                                        for p2x, p2y in pockets:
+                                            v_x, v_y = p2x - ghost_x, p2y - ghost_y
+                                            dot = v_x * tx + v_y * ty
+                                            if dot > 0: # Cue is moving towards this pocket
+                                                proj_x, proj_y = ghost_x + dot * tx, ghost_y + dot * ty
+                                                if math.hypot(p2x - proj_x, p2y - proj_y) < pocket_radius + 10:
+                                                    scratch_risk = True; break
+                                        
+                                        if scratch_risk: shot_quality -= 5.0 # Massive penalty for scratches
+
+                                        if shot_quality > best_shot_quality:
+                                            best_shot_quality = shot_quality
+                                            best_aim_target = (ghost_x, ghost_y)
+                                            is_banking = False
+                                            
+                                # 2. EVALUATE BANK SHOTS (Single Rail)
+                                # Mirror the pockets across the 4 cushions to find reflection vectors
+                                banks = [
+                                    (240, lambda x, y: (x, 240 - (y - 240)), 'Y'), # Top Cushion
+                                    (840, lambda x, y: (x, 840 + (840 - y)), 'Y'), # Bottom Cushion
+                                    (200, lambda x, y: (200 - (x - 200), y), 'X'), # Left Cushion
+                                    (1400, lambda x, y: (1400 + (1400 - x), y), 'X') # Right Cushion
+                                ]
+                                for px, py in pockets:
+                                    for c_val, mirror_func, axis in banks:
+                                        mx, my = mirror_func(px, py)
+                                        dx_m, dy_m = mx - b.position.x, my - b.position.y
+                                        
+                                        # Calculate exact intersection point on the cushion
+                                        try:
+                                            if axis == 'Y': t = (c_val - b.position.y) / dy_m
+                                            else: t = (c_val - b.position.x) / dx_m
+                                        except ZeroDivisionError: continue
+                                            
+                                        if 0 < t < 1:
+                                            bank_x = b.position.x + t * dx_m
+                                            bank_y = b.position.y + t * dy_m
+                                            
+                                            # Validate bank point bounds (must hit the playable area of the rail)
+                                            if not (200 <= bank_x <= 1400) or not (240 <= bank_y <= 840): continue
+                                            if not path_is_clear((b.position.x, b.position.y), (bank_x, bank_y), [b, cue_body]): continue
+                                            if not path_is_clear((bank_x, bank_y), (px, py), [b, cue_body]): continue
+                                            
+                                            # Bank Shot Ghost ball
+                                            dir_px, dir_py = (bank_x - b.position.x), (bank_y - b.position.y)
+                                            dist_p = math.hypot(dir_px, dir_py)
+                                            dir_px, dir_py = dir_px/dist_p, dir_py/dist_p
+                                            
+                                            ghost_x = b.position.x - dir_px * (ball_radius * 2)
+                                            ghost_y = b.position.y - dir_py * (ball_radius * 2)
+                                            
+                                            if not path_is_clear((cue_body.position.x, cue_body.position.y), (ghost_x, ghost_y), [b, cue_body]): continue
+                                            
+                                            dx_c, dy_c = ghost_x - cue_body.position.x, ghost_y - cue_body.position.y
+                                            dist_c = math.hypot(dx_c, dy_c)
+                                            if dist_c == 0: continue
+                                            dir_cx, dir_cy = dx_c / dist_c, dy_c / dist_c
+                                            
+                                            alignment = (dir_cx * dir_px) + (dir_cy * dir_py)
+                                            if alignment > 0.1:
+                                                # Bank shots are penalized natively by 1.5 points so direct shots are always preferred
+                                                shot_quality = alignment - 1.5 - (dist_p * 0.0002) 
+                                                
+                                                if shot_quality > best_shot_quality:
+                                                    best_shot_quality = shot_quality
+                                                    best_aim_target = (ghost_x, ghost_y)
+                                                    is_banking = True
+
+                        # 3. SET THE TARGET AND MOVE TO AIMING PHASE
+                        if best_aim_target:
+                            cue_body.ai_target_angle = math.atan2(best_aim_target[1] - cue_body.position.y, best_aim_target[0] - cue_body.position.x)
+                            cue_body.ai_target_power = 6000 if is_break_shot else (3800 if is_banking else 3000)
+                        else:
+                            # Safety Shot / Fallback (Tap the closest ball if totally trapped)
+                            for i, (b, s) in enumerate(balls):
+                                if ball_props[i][2] in target_nums:
+                                    best_aim_target = (b.position.x, b.position.y)
+                                    break
+                            if best_aim_target:
+                                cue_body.ai_target_angle = math.atan2(best_aim_target[1] - cue_body.position.y, best_aim_target[0] - cue_body.position.x)
+                                cue_body.ai_target_power = 1500
+
+                        cue_body.ai_state = "AIMING"
+                        is_charging = False
+                        current_power = 0
+
+                elif cue_body.ai_state == "AIMING":
+                    diff = (cue_body.ai_target_angle - aim_angle) % (2 * math.pi)
+                    if diff > math.pi: diff -= 2 * math.pi
+                        
+                    if abs(diff) < 0.03:
+                        aim_angle = cue_body.ai_target_angle
+                        cue_body.ai_state = "CHARGING"
+                        is_charging = True
+                    else:
+                        aim_angle += diff * 0.08 
+
+                elif cue_body.ai_state == "CHARGING":
+                    is_charging = True
+                    if current_power < cue_body.ai_target_power:
+                        current_power += 80 
+                    else:
+                        current_power = cue_body.ai_target_power
+                        cue_body.ai_state = "SHOOTING"
+                        
+                elif cue_body.ai_state == "SHOOTING":
+                    force_vec = (current_power * math.cos(aim_angle), current_power * math.sin(aim_angle))
+                    cue_body.apply_impulse_at_world_point(force_vec, cue_body.position)
+                    
+                    is_charging, current_power = False, 0
+                    shot_taken, ball_in_hand = True, False
+                    del cue_body.ai_state
+            
             # --- USER INPUT LOGIC ---
             if not is_ai_turn:
                 if is_dragging_spin:
