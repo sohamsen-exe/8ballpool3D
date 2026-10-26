@@ -168,7 +168,7 @@ next_game_state = ""
 ui_alpha = 255
 fade_speed = 15
 
-fade_overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert().alpha()
+fade_overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert_alpha()
 fade_overlay.fill((0, 0, 0))
 
 def change_state(new_state):
@@ -215,7 +215,7 @@ rotated_ball_cache = {}
 
 def get_or_create_ball_surf(color, is_stripe, num):
     if num not in ball_cache:
-        surf = pygame.Surface((ball_radius*2, ball_radius*2), pygame.SRCALPHA).convert().alpha()
+        surf = pygame.Surface((ball_radius*2, ball_radius*2), pygame.SRCALPHA).convert_alpha()
         if num == 0: 
             pygame.draw.circle(surf, WHITE, (ball_radius, ball_radius), ball_radius)
             pygame.draw.circle(surf, (200, 0, 0), (ball_radius, 6), 4)
@@ -306,7 +306,7 @@ def draw_tiny_ball(surf, x, y, color, is_stripe, is_8_ball=False):
     pygame.draw.circle(surf, (255, 255, 255, 200), (x - 4, y - 4), 4)
 
 def draw_avatar(surf, x, y, is_active, is_bot=False):
-    av_surf = pygame.Surface((80, 80), pygame.SRCALPHA).convert().alpha()
+    av_surf = pygame.Surface((80, 80), pygame.SRCALPHA).convert_alpha()
     pygame.draw.rect(av_surf, (90, 100, 110), (0, 0, 80, 80)) 
     
     if is_bot:
@@ -323,7 +323,7 @@ def draw_avatar(surf, x, y, is_active, is_bot=False):
         pygame.draw.circle(av_surf, (220, 220, 220), (40, 30), 20) 
         pygame.draw.circle(av_surf, (220, 220, 220), (40, 95), 50) 
     
-    mask = pygame.Surface((80, 80), pygame.SRCALPHA).convert().alpha()
+    mask = pygame.Surface((80, 80), pygame.SRCALPHA).convert_alpha()
     pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, 80, 80), border_radius=12)
     av_surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
     
@@ -1295,7 +1295,7 @@ while running:
 
         # --- EXCLUSIVE OVERLAYS ---
         if game_over_msg:
-            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert().alpha()
+            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert_alpha()
             overlay.fill((0, 0, 0, 210)) 
             game_surface.blit(overlay, (0, 0))
             
@@ -1312,7 +1312,7 @@ while running:
             game_surface.blit(button_font.render("MAIN MENU", True, WHITE), button_font.render("MAIN MENU", True, WHITE).get_rect(center=win_menu_btn.center))
 
         elif spin_popup_active:
-            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert().alpha()
+            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert_alpha()
             overlay.fill((0, 0, 0, 210)) 
             game_surface.blit(overlay, (0, 0))
             
@@ -1333,7 +1333,7 @@ while running:
             game_surface.blit(button_font.render("DONE", True, WHITE), button_font.render("DONE", True, WHITE).get_rect(center=close_spin_btn.center))
 
         elif game_state == "PAUSED":
-            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert().alpha()
+            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert_alpha()
             overlay.fill((0, 0, 0, 180)) 
             game_surface.blit(overlay, (0, 0))
             
