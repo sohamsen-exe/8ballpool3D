@@ -14,6 +14,15 @@ current_width, current_height = info.current_w, info.current_h
 RENDER_FLAGS = pygame.FULLSCREEN | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
 
+# --- macOS FULLSCREEN WARM-UP ---
+# Let the OS finish its fullscreen sliding animation before generating transparent textures
+for _ in range(15):
+    screen.fill((0, 0, 0))
+    pygame.display.flip()
+    pygame.event.pump()
+    pygame.time.wait(50)
+# --------------------------------
+
 game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
 pygame.display.set_caption("8-Ball Pool 3D")
 clock = pygame.time.Clock()
