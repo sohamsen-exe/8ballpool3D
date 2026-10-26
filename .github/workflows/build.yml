@@ -36,7 +36,7 @@ jobs:
 
     - name: Build with PyInstaller (macOS)
       if: matrix.os == 'macos-latest'
-      run: pyinstaller --onefile --windowed --name "8-Ball-Pool-3D" --icon=icon.icns pool.py
+      run: pyinstaller --windowed --name "8-Ball-Pool-3D" --icon=icon.icns pool.py
 
     - name: Prepare Windows Executable
       if: matrix.os == 'windows-latest'
