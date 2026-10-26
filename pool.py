@@ -15,9 +15,11 @@ RENDER_FLAGS = pygame.FULLSCREEN | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
 
 # --- macOS FULLSCREEN WARM-UP ---
-# Let the OS finish its fullscreen sliding animation before generating transparent textures
+dummy_alpha = pygame.Surface((10, 10), pygame.SRCALPHA)
+dummy_alpha.fill((255, 255, 255, 128))
 for _ in range(15):
-    screen.fill((0, 0, 0))
+    screen.fill((15, 20, 40)) # Matches the dark blue MENU_BG
+    screen.blit(dummy_alpha, (0, 0)) # Jumpstarts the GPU alpha pipeline
     pygame.display.flip()
     pygame.event.pump()
     pygame.time.wait(50)
