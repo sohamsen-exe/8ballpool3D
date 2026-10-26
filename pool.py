@@ -462,24 +462,13 @@ while running:
         # Block inputs if the screen is currently fading
         if transition_state != "NONE" and event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             continue
-            
+
         elif event.type == pygame.VIDEORESIZE:
             current_width, current_height = event.w, event.h
             screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
-            
+
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_f:
-                pygame.display.toggle_fullscreen() # Safely toggles fullscreen on/off
-            elif event.key == pygame.K_ESCAPE:
-                if game_state == "MENU":
-                    running = False # Safely exit the app from the Main Menu
-                elif game_state in ["MODE_SELECT", "NAMES"]:
-                    change_state("MENU")
-                elif game_state == "PLAYING" and game_over_msg == "":
-                    if spin_popup_active: spin_popup_active = False
-                    else: game_state = "PAUSED"
-                elif game_state == "PAUSED": game_state = "PLAYING"
-            elif game_state == "NAMES":
+            if game_state == "NAMES":
                 if event.key == pygame.K_RETURN:
                     if active_input == 1 and p1_name.strip() != "": 
                         if game_mode == "PvAI":
@@ -502,7 +491,7 @@ while running:
                 if game_state == "PLAYING" and event.unicode.isprintable():
                     cheat_code += event.unicode.lower()
                     cheat_code = cheat_code[-10:]
-                    
+
                     if "godmode" in cheat_code: 
                         cheat_hand_of_god = not cheat_hand_of_god
                         cheat_code = ""
@@ -515,7 +504,7 @@ while running:
                         cheat_aimbot = not cheat_aimbot
                         cheat_code = ""
                         alert_msg, alert_timer = f"AIMBOT: {'ON' if cheat_aimbot else 'OFF'}", 120
-                    
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "MENU":
                 if play_main_btn.collidepoint(mouse_x, mouse_y):
