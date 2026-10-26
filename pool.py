@@ -4,11 +4,14 @@ import math
 
 # --- Setup Pygame ---
 pygame.init()
-# Canvas expanded to 1600x1000 to create a dedicated UI header!
 VIRTUAL_W, VIRTUAL_H = 1600, 1000 
-current_width, current_height = VIRTUAL_W // 2, VIRTUAL_H // 2  
 
-RENDER_FLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
+# Fetch the native resolution of the monitor
+info = pygame.display.Info()
+current_width, current_height = info.current_w, info.current_h
+
+# Launch in Fullscreen mode
+RENDER_FLAGS = pygame.FULLSCREEN | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
 
 game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
@@ -60,7 +63,7 @@ spin_x, spin_y = 0.0, 0.0
 cue_spin_vec = [0.0, 0.0]
 
 # --- SPACIOUS UI LAYOUT ---
-spin_ui_center = (60, 45)
+spin_ui_center = (VIRTUAL_W - 70, 55) # Moved to Far Right
 spin_ui_radius = 28
 spin_popup_active = False     
 is_dragging_spin = False      
@@ -68,29 +71,24 @@ large_spin_center = (VIRTUAL_W // 2, VIRTUAL_H // 2)
 large_spin_radius = 180
 
 # --- Menu Buttons ---
-play_main_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 40, 400, 100)
-quit_main_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 100, 400, 100)
+play_main_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 - 40, 500, 100)
+quit_main_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 + 100, 500, 100)
 
-pvp_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 80, 400, 80)
-vs_ai_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 20, 400, 80)
-back_mode_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 120, 400, 80)
+pvp_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 - 80, 500, 80)
+vs_ai_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 + 20, 500, 80)
+back_mode_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 + 120, 500, 80)
 
-pause_btn = pygame.Rect(VIRTUAL_W - 190, 25, 160, 45)
-close_spin_btn = pygame.Rect(VIRTUAL_W // 2 - 100, VIRTUAL_H // 2 + 220, 200, 60)
+pause_btn = pygame.Rect(40, 25, 60, 60) # Moved to Far Left
+close_spin_btn = pygame.Rect(VIRTUAL_W // 2 - 100, VIRTUAL_H // 2 + 220, 200, 60) 
 
-# --- REPLACED: New Game Mode Buttons ---
-pvp_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 80, 400, 80)
-vs_ai_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 20, 400, 80)
-quit_main_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 120, 400, 80)
+resume_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 - 120, 500, 80)
+restart_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 - 20, 500, 80)
+quit_menu_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 + 80, 500, 80)
 
-resume_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 120, 400, 80)
-restart_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 - 20, 400, 80)
-quit_menu_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 80, 400, 80)
+win_restart_btn = pygame.Rect(VIRTUAL_W//2 - 340, VIRTUAL_H//2 + 20, 320, 80) 
+win_menu_btn = pygame.Rect(VIRTUAL_W//2 + 20, VIRTUAL_H//2 + 20, 320, 80) 
 
-win_restart_btn = pygame.Rect(VIRTUAL_W//2 - 340, VIRTUAL_H//2 + 20, 320, 80)
-win_menu_btn = pygame.Rect(VIRTUAL_W//2 + 20, VIRTUAL_H//2 + 20, 320, 80)
-
-# --- PERFECT SYMMETRICAL 2:1 TABLE GEOMETRY (Shifted Down 80px) ---
+# --- PERFECT SYMMETRICAL 2:1 TABLE GEOMETRY ---
 pockets = [(175, 215), (800, 215), (1425, 215), (175, 865), (800, 865), (1425, 865)]
 pocket_shapes = [] 
 
@@ -116,11 +114,11 @@ def build_static_table_cache():
 
     silver = (200, 210, 220)
     for dx in [350, 500, 650, 950, 1100, 1250]:
-        pygame.draw.circle(table_bg, silver, (dx, 180), 6) 
-        pygame.draw.circle(table_bg, silver, (dx, 900), 6) 
+        pygame.draw.circle(table_bg, silver, (dx, 155), 6)  # Centered in top border
+        pygame.draw.circle(table_bg, silver, (dx, 925), 6)  # Centered in bottom border
     for dy in [390, 540, 690]:
-        pygame.draw.circle(table_bg, silver, (140, dy), 6)  
-        pygame.draw.circle(table_bg, silver, (1460, dy), 6)
+        pygame.draw.circle(table_bg, silver, (115, dy), 6)   # Centered in left border
+        pygame.draw.circle(table_bg, silver, (1485, dy), 6)  # Centered in right border
 
     marking_color = (8, 90, 35)
     pygame.draw.line(table_bg, marking_color, (500, 240), (500, 840), 4)
@@ -181,6 +179,10 @@ def change_state(new_state):
         transition_state = "FADE_OUT"
 
 # --- Game State Variables ---
+cheat_code = ""
+cheat_hand_of_god = False
+cheat_ray_of_hope = False
+cheat_aimbot = False
 game_state = "MENU"
 game_mode = "PVP"
 p1_name = "Player 1"
@@ -195,6 +197,11 @@ pocketed_this_turn_balls, global_pocketed_balls = [], []
 alert_msg, alert_timer = "", 0
 ball_in_hand, is_dragging_cue = False, False
 is_break_shot = True
+cue_is_stopped = True
+is_break_shot = True
+cue_is_stopped = True
+aimbot_target_body = None
+aimbot_target_pos = None
 
 # --- GRAPHICS CACHING ---
 shadow_surf = pygame.Surface((ball_radius * 2, ball_radius * 2), pygame.SRCALPHA)
@@ -255,6 +262,7 @@ def setup_balls():
     global alert_msg, alert_timer, ball_in_hand, is_dragging_cue, is_charging
     global pocketed_this_turn_balls, global_pocketed_balls, spin_x, spin_y, cue_spin_vec, is_break_shot
     global spin_popup_active, is_dragging_spin
+    global aimbot_target_body, aimbot_target_pos 
     
     turn, p1_type, p2_type = 1, None, None
     game_over_msg, alert_msg, alert_timer = "", "", 0
@@ -264,6 +272,8 @@ def setup_balls():
     cue_spin_vec = [0.0, 0.0]
     spin_popup_active, is_dragging_spin = False, False
     is_break_shot = True
+    aimbot_target_body, aimbot_target_pos = None, None 
+    
     pocketed_this_turn_balls.clear()
     global_pocketed_balls.clear()
     animating_balls.clear()
@@ -272,7 +282,6 @@ def setup_balls():
     balls.clear()
     ball_props.clear()
 
-    # Re-centered exactly on the true Y=540 horizontal line
     cue_body, cue_shape = create_ball(400, 540, WHITE, number=0) 
     start_x, start_y = 1100, 540
     pattern = [(False,1), (True,9), (False,2), (True,10), (False,8), 
@@ -296,6 +305,34 @@ def draw_tiny_ball(surf, x, y, color, is_stripe, is_8_ball=False):
     else: pygame.draw.circle(surf, color, (x, y), r)
     if is_8_ball: pygame.draw.circle(surf, WHITE, (x, y), 6)
     pygame.draw.circle(surf, (255, 255, 255, 200), (x - 4, y - 4), 4)
+
+def draw_avatar(surf, x, y, is_active, is_bot=False):
+    av_surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+    pygame.draw.rect(av_surf, (90, 100, 110), (0, 0, 80, 80)) 
+    
+    if is_bot:
+        # Generic Robot Avatar
+        pygame.draw.line(av_surf, (200, 200, 200), (40, 20), (40, 10), 2) # Antenna
+        pygame.draw.circle(av_surf, (255, 50, 50), (40, 10), 4) # Antenna Bulb
+        pygame.draw.rect(av_surf, (150, 160, 170), (20, 20, 40, 35), border_radius=6) # Head
+        pygame.draw.rect(av_surf, (255, 255, 0), (28, 30, 8, 8), border_radius=2) # Left Eye
+        pygame.draw.rect(av_surf, (255, 255, 0), (44, 30, 8, 8), border_radius=2) # Right Eye
+        pygame.draw.rect(av_surf, (50, 50, 50), (30, 45, 20, 4)) # Mouth
+        pygame.draw.rect(av_surf, (120, 130, 140), (15, 60, 50, 30), border_radius=8) # Body
+    else:
+        # Human Avatar
+        pygame.draw.circle(av_surf, (220, 220, 220), (40, 30), 20) 
+        pygame.draw.circle(av_surf, (220, 220, 220), (40, 95), 50) 
+    
+    mask = pygame.Surface((80, 80), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, 80, 80), border_radius=12)
+    av_surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    
+    border_color = (255, 215, 0) if is_active else (50, 50, 50)
+    border_thick = 4 if is_active else 2
+    
+    surf.blit(av_surf, (x, y))
+    pygame.draw.rect(surf, border_color, (x, y, 80, 80), border_thick, border_radius=12)
 
 def render_single_ball(surf, bx, by, color, is_stripe, num, angle, current_radius):
     if current_radius <= 0: return
@@ -435,7 +472,7 @@ while running:
             if game_state == "NAMES":
                 if event.key == pygame.K_RETURN:
                     if active_input == 1 and p1_name.strip() != "": 
-                        if game_mode == "PvAI":  # Skip P2 input if playing against bot
+                        if game_mode == "PvAI":
                             setup_balls()
                             change_state("PLAYING")
                         else:
@@ -454,12 +491,27 @@ while running:
                 if game_state in ["MODE_SELECT", "NAMES"]:
                     change_state("MENU")
                 elif game_state == "PLAYING" and game_over_msg == "":
-                    if spin_popup_active: 
-                        spin_popup_active = False
-                    else: 
-                        game_state = "PAUSED"
-                elif game_state == "PAUSED": 
-                    game_state = "PLAYING"
+                    if spin_popup_active: spin_popup_active = False
+                    else: game_state = "PAUSED"
+                elif game_state == "PAUSED": game_state = "PLAYING"
+            else:
+                # --- CHEAT CODE LISTENER ---
+                if game_state == "PLAYING" and event.unicode.isprintable():
+                    cheat_code += event.unicode.lower()
+                    cheat_code = cheat_code[-10:]
+                    
+                    if "godmode" in cheat_code: 
+                        cheat_hand_of_god = not cheat_hand_of_god
+                        cheat_code = ""
+                        alert_msg, alert_timer = f"HAND OF GOD: {'ON' if cheat_hand_of_god else 'OFF'}", 120
+                    elif "raycast" in cheat_code: 
+                        cheat_ray_of_hope = not cheat_ray_of_hope
+                        cheat_code = ""
+                        alert_msg, alert_timer = f"RAYCAST: {'ON' if cheat_ray_of_hope else 'OFF'}", 120
+                    elif "aimbot" in cheat_code: 
+                        cheat_aimbot = not cheat_aimbot
+                        cheat_code = ""
+                        alert_msg, alert_timer = f"AIMBOT: {'ON' if cheat_aimbot else 'OFF'}", 120
                     
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == "MENU":
@@ -507,22 +559,71 @@ while running:
                 else:
                     if pause_btn.collidepoint(mouse_x, mouse_y): 
                         game_state = "PAUSED"
-                    elif not (game_mode == "PvAI" and turn == 2): # BLOCK USER CLICKS IF AI TURN
+                    elif not (game_mode == "PvAI" and turn == 2):
                         if math.hypot(mouse_x - spin_ui_center[0], mouse_y - spin_ui_center[1]) <= spin_ui_radius:
                             spin_popup_active = True 
                         elif game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_body.velocity.length < 2 and not shot_taken:
-                            if ball_in_hand and math.hypot(mouse_x - cue_body.position.x, mouse_y - cue_body.position.y) <= ball_radius * 3:
+                            if (ball_in_hand or cheat_hand_of_god) and math.hypot(mouse_x - cue_body.position.x, mouse_y - cue_body.position.y) <= ball_radius * 3:
                                 is_dragging_cue = True
                             else:
                                 is_charging = True
                                 charge_start_pos = (mouse_x, mouse_y)
                 
         elif event.type == pygame.MOUSEBUTTONUP:
-            if game_state == "PLAYING" and not (game_mode == "PvAI" and turn == 2): # BLOCK USER RELEASE IF AI TURN
+            if game_state == "PLAYING" and not (game_mode == "PvAI" and turn == 2):
                 if is_dragging_spin: is_dragging_spin = False
                 elif is_dragging_cue: is_dragging_cue = False 
                 elif is_charging:
                     if current_power > 100: 
+                        
+                        # --- AIMBOT EXECUTION ---
+                        if cheat_aimbot:
+                            dx, dy = math.cos(aim_angle), math.sin(aim_angle)
+                            closest_t, target_ball = 2000, None
+                            
+                            # 1. Find the ball the cue stick is pointing at
+                            for b, s in balls:
+                                if b == cue_body: continue
+                                vx, vy = cue_body.position.x - b.position.x, cue_body.position.y - b.position.y
+                                b_coef = (vx * dx + vy * dy)
+                                c_coef = (vx * vx + vy * vy) - (4 * ball_radius * ball_radius) 
+                                discriminant = b_coef * b_coef - c_coef
+                                if discriminant >= 0:
+                                    t1 = -b_coef - math.sqrt(discriminant)
+                                    if 0 < t1 < closest_t: closest_t, target_ball = t1, b
+                                    
+                            # 2. Lock onto the pocket in that specific direction
+                            if target_ball:
+                                impact_x = cue_body.position.x + dx * closest_t
+                                impact_y = cue_body.position.y + dy * closest_t
+                                nat_dx = target_ball.position.x - impact_x
+                                nat_dy = target_ball.position.y - impact_y
+                                nat_dist = math.hypot(nat_dx, nat_dy)
+                                
+                                if nat_dist > 0:
+                                    nat_dx /= nat_dist; nat_dy /= nat_dist
+                                    best_align, best_pocket, best_angle = -999, None, aim_angle
+                                    
+                                    for px, py in pockets:
+                                        p_dx, p_dy = px - target_ball.position.x, py - target_ball.position.y
+                                        p_dist = math.hypot(p_dx, p_dy)
+                                        if p_dist == 0: continue
+                                        p_dx /= p_dist; p_dy /= p_dist
+                                        
+                                        align = (nat_dx * p_dx) + (nat_dy * p_dy)
+                                        if align > best_align:
+                                            best_align = align
+                                            best_pocket = (px, py)
+                                            ghost_x = target_ball.position.x - p_dx * (ball_radius * 2)
+                                            ghost_y = target_ball.position.y - p_dy * (ball_radius * 2)
+                                            best_angle = math.atan2(ghost_y - cue_body.position.y, ghost_x - cue_body.position.x)
+                                            
+                                    if best_pocket and best_align > 0.3: # Only snap if aiming roughly towards it
+                                        aim_angle = best_angle
+                                        aimbot_target_body = target_ball
+                                        aimbot_target_pos = best_pocket
+                        # --- END AIMBOT ---
+
                         force_vec = (current_power * math.cos(aim_angle), current_power * math.sin(aim_angle))
                         offset_x = spin_x * (ball_radius * 0.9)
                         offset_y = spin_y * (ball_radius * 0.9)
@@ -540,6 +641,49 @@ while running:
                         shot_taken, ball_in_hand = True, False 
                         
                     is_charging, current_power = False, 0
+
+    # --- CURSOR HOVER LOGIC (Runs every frame) ---
+    hovering_interactive = False
+
+    if game_state == "MENU":
+        if play_main_btn.collidepoint(mouse_x, mouse_y) or quit_main_btn.collidepoint(mouse_x, mouse_y):
+            hovering_interactive = True
+
+    elif game_state == "MODE_SELECT":
+        if pvp_btn.collidepoint(mouse_x, mouse_y) or vs_ai_btn.collidepoint(mouse_x, mouse_y) or back_mode_btn.collidepoint(mouse_x, mouse_y):
+            hovering_interactive = True
+
+    elif game_state == "NAMES":
+        p1_box = pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 - 120, 600, 80)
+        p2_box = pygame.Rect(VIRTUAL_W//2 - 300, VIRTUAL_H//2 + 40, 600, 80)
+        start_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 + 200, 500, 100)
+        if p1_box.collidepoint(mouse_x, mouse_y) or (game_mode == "PVP" and p2_box.collidepoint(mouse_x, mouse_y)) or start_btn.collidepoint(mouse_x, mouse_y):
+            hovering_interactive = True
+
+    elif game_state == "PAUSED":
+        if resume_btn.collidepoint(mouse_x, mouse_y) or restart_btn.collidepoint(mouse_x, mouse_y) or quit_menu_btn.collidepoint(mouse_x, mouse_y):
+            hovering_interactive = True
+
+    elif game_state == "PLAYING":
+        if game_over_msg != "":
+            if win_restart_btn.collidepoint(mouse_x, mouse_y) or win_menu_btn.collidepoint(mouse_x, mouse_y):
+                hovering_interactive = True
+        elif spin_popup_active:
+            if close_spin_btn.collidepoint(mouse_x, mouse_y) or math.hypot(mouse_x - large_spin_center[0], mouse_y - large_spin_center[1]) <= large_spin_radius:
+                hovering_interactive = True
+        else:
+            if pause_btn.collidepoint(mouse_x, mouse_y) or math.hypot(mouse_x - spin_ui_center[0], mouse_y - spin_ui_center[1]) <= spin_ui_radius:
+                hovering_interactive = True
+            
+            is_player_turn = not (game_mode == "PvAI" and turn == 2)
+            cue_in_table = cue_body in [b[0] for b in balls]
+            cue_is_stopped = cue_in_table and (cue_body.velocity.x**2 + cue_body.velocity.y**2 < 4)
+            
+            if is_player_turn and cue_in_table and cue_is_stopped and not shot_taken:
+                dist_to_cue = math.hypot(mouse_x - cue_body.position.x, mouse_y - cue_body.position.y)
+                can_drag = (ball_in_hand or cheat_hand_of_god) and dist_to_cue <= ball_radius * 3
+                if is_dragging_cue or can_drag:
+                    hovering_interactive = True
 
     if game_state in ["MENU", "MODE_SELECT", "NAMES"]:
         game_surface.fill(MENU_BG) 
@@ -585,7 +729,7 @@ while running:
                 game_surface.blit(ui_font.render("P2 Name:", True, WHITE), (p2_box.x - 200, p2_box.y + 20))
                 game_surface.blit(ui_font.render(p2_name + ("_" if active_input == 2 else ""), True, BLACK), (p2_box.x + 20, p2_box.y + 20))
 
-            start_btn = pygame.Rect(VIRTUAL_W//2 - 200, VIRTUAL_H//2 + 200, 400, 100)
+            start_btn = pygame.Rect(VIRTUAL_W//2 - 250, VIRTUAL_H//2 + 200, 500, 100)
             pygame.draw.rect(game_surface, BTN_GREEN, start_btn, border_radius=20)
             game_surface.blit(button_font.render("START MATCH", True, WHITE), button_font.render("START MATCH", True, WHITE).get_rect(center=start_btn.center))
 
@@ -597,7 +741,7 @@ while running:
             if is_ai_turn and game_over_msg == "" and cue_body in [b[0] for b in balls] and cue_is_stopped and not shot_taken:
                 if not hasattr(cue_body, 'ai_state'): 
                     cue_body.ai_state = "THINKING"
-                    cue_body.ai_timer = 90 # 1.5 seconds to "think"
+                    cue_body.ai_timer = 90 
                     cue_body.ai_target_angle = 0
                     cue_body.ai_target_power = 0
                 
@@ -607,12 +751,19 @@ while running:
                     else:
                         # --- AI BRAIN INITIALIZATION ---
                         target_nums = []
-                        curr_score = len([b for b in global_pocketed_balls if b > 8])
-                        if p2_type is None: target_nums = [i for i in range(1, 16) if i != 8 and i not in global_pocketed_balls]
-                        elif curr_score < 7: target_nums = [i for i in range(9, 16) if i not in global_pocketed_balls]
-                        else: target_nums = [8]
+                        if p2_type is None:
+                            target_nums = [i for i in range(1, 16) if i != 8 and i not in global_pocketed_balls]
+                        else:
+                            # FIX: Dynamically check the AI's actual assigned color
+                            if p2_type == "Solids":
+                                curr_score = len([b for b in global_pocketed_balls if b < 8])
+                                if curr_score < 7: target_nums = [i for i in range(1, 8) if i not in global_pocketed_balls]
+                                else: target_nums = [8]
+                            else:
+                                curr_score = len([b for b in global_pocketed_balls if b > 8])
+                                if curr_score < 7: target_nums = [i for i in range(9, 16) if i not in global_pocketed_balls]
+                                else: target_nums = [8]
 
-                        # Helper: Mathematically check if a path is blocked by other balls
                         def path_is_clear(start, end, ignore_bodies):
                             sx, sy = start
                             ex, ey = end
@@ -621,18 +772,27 @@ while running:
                             dx, dy = (ex - sx) / path_len, (ey - sy) / path_len
                             for b, _ in balls:
                                 if b in ignore_bodies: continue
+                                # STRICT: Check if a ball is sitting exactly on our destination
+                                if math.hypot(b.position.x - ex, b.position.y - ey) < ball_radius * 2.1: return False
+                                # STRICT: Check swept path
                                 v_x, v_y = b.position.x - sx, b.position.y - sy
                                 dot = v_x * dx + v_y * dy
                                 if 0 < dot < path_len:
                                     proj_x, proj_y = sx + dot * dx, sy + dot * dy
-                                    # 2.2 factor adds a slight buffer so it doesn't skim too closely
-                                    if math.hypot(b.position.x - proj_x, b.position.y - proj_y) < ball_radius * 2.2:
+                                    if math.hypot(b.position.x - proj_x, b.position.y - proj_y) < ball_radius * 2.1:
                                         return False
                             return True
 
                         best_aim_target = None
                         best_shot_quality = -9999 
                         is_banking = False
+
+                        banks = [
+                            (240, lambda x, y: (x, 240 - (y - 240)), 'Y'),
+                            (840, lambda x, y: (x, 840 + (840 - y)), 'Y'),
+                            (200, lambda x, y: (200 - (x - 200), y), 'X'),
+                            (1400, lambda x, y: (1400 + (1400 - x), y), 'X')
+                        ]
 
                         if is_break_shot:
                             for i, (b, s) in enumerate(balls):
@@ -643,7 +803,7 @@ while running:
                             for i, (b, s) in enumerate(balls):
                                 if ball_props[i][2] not in target_nums: continue
                                 
-                                # 1. EVALUATE DIRECT SHOTS
+                                # 1. EVALUATE DIRECT POCKET SHOTS
                                 for px, py in pockets:
                                     dx_p, dy_p = px - b.position.x, py - b.position.y
                                     dist_p = math.hypot(dx_p, dy_p)
@@ -653,7 +813,6 @@ while running:
                                     ghost_x = b.position.x - dir_px * (ball_radius * 2)
                                     ghost_y = b.position.y - dir_py * (ball_radius * 2)
                                     
-                                    # Skip if shot is blocked by another ball
                                     if not path_is_clear((b.position.x, b.position.y), (px, py), [b, cue_body]): continue
                                     if not path_is_clear((cue_body.position.x, cue_body.position.y), (ghost_x, ghost_y), [b, cue_body]): continue
                                     
@@ -663,57 +822,44 @@ while running:
                                     dir_cx, dir_cy = dx_c / dist_c, dy_c / dist_c
                                     
                                     alignment = (dir_cx * dir_px) + (dir_cy * dir_py)
-                                    if alignment > 0.1: # Must be a valid cut angle
+                                    if alignment > 0.1: 
                                         shot_quality = alignment - (dist_p * 0.0002)
                                         
-                                        # Scratch Prevention (90-Degree Tangent Prediction)
                                         cross = dir_cx * dir_py - dir_cy * dir_px
                                         tx, ty = (-dir_py, dir_px) if cross > 0 else (dir_py, -dir_px)
                                         scratch_risk = False
                                         for p2x, p2y in pockets:
                                             v_x, v_y = p2x - ghost_x, p2y - ghost_y
                                             dot = v_x * tx + v_y * ty
-                                            if dot > 0: # Cue is moving towards this pocket
+                                            if dot > 0: 
                                                 proj_x, proj_y = ghost_x + dot * tx, ghost_y + dot * ty
                                                 if math.hypot(p2x - proj_x, p2y - proj_y) < pocket_radius + 10:
                                                     scratch_risk = True; break
                                         
-                                        if scratch_risk: shot_quality -= 5.0 # Massive penalty for scratches
+                                        if scratch_risk: shot_quality -= 5.0 
 
                                         if shot_quality > best_shot_quality:
                                             best_shot_quality = shot_quality
                                             best_aim_target = (ghost_x, ghost_y)
                                             is_banking = False
                                             
-                                # 2. EVALUATE BANK SHOTS (Single Rail)
-                                # Mirror the pockets across the 4 cushions to find reflection vectors
-                                banks = [
-                                    (240, lambda x, y: (x, 240 - (y - 240)), 'Y'), # Top Cushion
-                                    (840, lambda x, y: (x, 840 + (840 - y)), 'Y'), # Bottom Cushion
-                                    (200, lambda x, y: (200 - (x - 200), y), 'X'), # Left Cushion
-                                    (1400, lambda x, y: (1400 + (1400 - x), y), 'X') # Right Cushion
-                                ]
+                                # 2. EVALUATE BANK SHOTS TO POCKET
                                 for px, py in pockets:
                                     for c_val, mirror_func, axis in banks:
                                         mx, my = mirror_func(px, py)
                                         dx_m, dy_m = mx - b.position.x, my - b.position.y
-                                        
-                                        # Calculate exact intersection point on the cushion
                                         try:
                                             if axis == 'Y': t = (c_val - b.position.y) / dy_m
                                             else: t = (c_val - b.position.x) / dx_m
                                         except ZeroDivisionError: continue
-                                            
                                         if 0 < t < 1:
                                             bank_x = b.position.x + t * dx_m
                                             bank_y = b.position.y + t * dy_m
                                             
-                                            # Validate bank point bounds (must hit the playable area of the rail)
                                             if not (200 <= bank_x <= 1400) or not (240 <= bank_y <= 840): continue
                                             if not path_is_clear((b.position.x, b.position.y), (bank_x, bank_y), [b, cue_body]): continue
                                             if not path_is_clear((bank_x, bank_y), (px, py), [b, cue_body]): continue
                                             
-                                            # Bank Shot Ghost ball
                                             dir_px, dir_py = (bank_x - b.position.x), (bank_y - b.position.y)
                                             dist_p = math.hypot(dir_px, dir_py)
                                             dir_px, dir_py = dir_px/dist_p, dir_py/dist_p
@@ -730,27 +876,53 @@ while running:
                                             
                                             alignment = (dir_cx * dir_px) + (dir_cy * dir_py)
                                             if alignment > 0.1:
-                                                # Bank shots are penalized natively by 1.5 points so direct shots are always preferred
                                                 shot_quality = alignment - 1.5 - (dist_p * 0.0002) 
-                                                
                                                 if shot_quality > best_shot_quality:
                                                     best_shot_quality = shot_quality
                                                     best_aim_target = (ghost_x, ghost_y)
                                                     is_banking = True
 
                         # 3. SET THE TARGET AND MOVE TO AIMING PHASE
+                        if best_aim_target is None:
+                            # Fallback 1: Safe direct contact (don't foul)
+                            for i, (b, s) in enumerate(balls):
+                                if ball_props[i][2] in target_nums:
+                                    if path_is_clear((cue_body.position.x, cue_body.position.y), (b.position.x, b.position.y), [b, cue_body]):
+                                        best_aim_target = (b.position.x, b.position.y)
+                                        break
+                                        
+                        if best_aim_target is None:
+                            # Fallback 2: Snookered Kick Shot (bounce off rail just to hit legally)
+                            for i, (b, s) in enumerate(balls):
+                                if ball_props[i][2] in target_nums:
+                                    for c_val, mirror_func, axis in banks:
+                                        mx, my = mirror_func(b.position.x, b.position.y)
+                                        dx_m, dy_m = mx - cue_body.position.x, my - cue_body.position.y
+                                        try:
+                                            if axis == 'Y': t = (c_val - cue_body.position.y) / dy_m
+                                            else: t = (c_val - cue_body.position.x) / dx_m
+                                        except ZeroDivisionError: continue
+                                        if 0 < t < 1:
+                                            bank_x = cue_body.position.x + t * dx_m
+                                            bank_y = cue_body.position.y + t * dy_m
+                                            if not (200 <= bank_x <= 1400) or not (240 <= bank_y <= 840): continue
+                                            if path_is_clear((cue_body.position.x, cue_body.position.y), (bank_x, bank_y), [b, cue_body]):
+                                                if path_is_clear((bank_x, bank_y), (b.position.x, b.position.y), [b, cue_body]):
+                                                    best_aim_target = (bank_x, bank_y)
+                                                    is_banking = True
+                                                    break
+                                    if best_aim_target: break
+
                         if best_aim_target:
                             cue_body.ai_target_angle = math.atan2(best_aim_target[1] - cue_body.position.y, best_aim_target[0] - cue_body.position.x)
                             cue_body.ai_target_power = 6000 if is_break_shot else (3800 if is_banking else 3000)
                         else:
-                            # Safety Shot / Fallback (Tap the closest ball if totally trapped)
+                            # Absolute last resort: Blindly hit towards a legal ball
                             for i, (b, s) in enumerate(balls):
                                 if ball_props[i][2] in target_nums:
-                                    best_aim_target = (b.position.x, b.position.y)
+                                    cue_body.ai_target_angle = math.atan2(b.position.y - cue_body.position.y, b.position.x - cue_body.position.x)
                                     break
-                            if best_aim_target:
-                                cue_body.ai_target_angle = math.atan2(best_aim_target[1] - cue_body.position.y, best_aim_target[0] - cue_body.position.x)
-                                cue_body.ai_target_power = 1500
+                            cue_body.ai_target_power = 2000
 
                         cue_body.ai_state = "AIMING"
                         is_charging = False
@@ -804,7 +976,7 @@ while running:
 
             # Kept exactly inside inner rail Y bounds 240-840
             if is_dragging_cue and not spin_popup_active:
-                if is_break_shot:
+                if is_break_shot and not cheat_hand_of_god:
                     cx = max(220, min(mouse_x, 500)) 
                 else:
                     cx = max(220, min(mouse_x, 1380))
@@ -818,6 +990,18 @@ while running:
 
             for _ in range(10):
                 space.step(1 / 600.0)
+
+                # --- AIMBOT MAGIC STEERING ---
+                if cheat_aimbot and aimbot_target_body and shot_taken:
+                    speed = aimbot_target_body.velocity.length
+                    # Steering naturally ceases if it transfers momentum to another ball
+                    if speed > 15: 
+                        adx = aimbot_target_pos[0] - aimbot_target_body.position.x
+                        ady = aimbot_target_pos[1] - aimbot_target_body.position.y
+                        adist = math.hypot(adx, ady)
+                        if adist > 0:
+                            aimbot_target_body.velocity = (adx/adist * speed, ady/adist * speed)
+                # -----------------------------
                 
                 if abs(cue_spin_vec[0]) > 0.1 or abs(cue_spin_vec[1]) > 0.1:
                     cue_body.apply_force_at_world_point((cue_spin_vec[0], cue_spin_vec[1]), cue_body.position)
@@ -859,6 +1043,7 @@ while running:
             cue_is_stopped = cue_body.velocity.x**2 + cue_body.velocity.y**2 < 4
 
             if shot_taken and all_stopped:
+                aimbot_target_body, aimbot_target_pos = None, None
                 foul_committed, foul_reason, turn_continues = False, "", False
                 cue_spin_vec = [0.0, 0.0] 
                 curr_type = p1_type if turn == 1 else p2_type
@@ -1008,28 +1193,33 @@ while running:
                     pygame.draw.line(game_surface, (255, 50, 50), (impact_x - 12, impact_y - 12), (impact_x + 12, impact_y + 12), 6)
                     pygame.draw.line(game_surface, (255, 50, 50), (impact_x + 12, impact_y - 12), (impact_x - 12, impact_y + 12), 6)
                 else:
-                    pygame.draw.circle(game_surface, WHITE, (int(impact_x), int(impact_y)), ball_radius, 2)
-                    nx = target_ball_hit.position.x - impact_x
-                    ny = target_ball_hit.position.y - impact_y
-                    dist = math.hypot(nx, ny)
-                    if dist > 0: nx /= dist; ny /= dist
-                    pygame.draw.line(game_surface, (255, 50, 50), target_ball_hit.position, (target_ball_hit.position.x + nx * 150, target_ball_hit.position.y + ny * 150), 3)
-                    
-                    tx, ty = -ny, nx
-                    if (tx * dx + ty * dy) < 0: tx, ty = -tx, -ty
-                    pygame.draw.line(game_surface, WHITE, (impact_x, impact_y), (impact_x + tx * 150, impact_y + ty * 150), 3)
+                        pygame.draw.circle(game_surface, WHITE, (int(impact_x), int(impact_y)), ball_radius, 2)
+                        nx = target_ball_hit.position.x - impact_x
+                        ny = target_ball_hit.position.y - impact_y
+                        dist = math.hypot(nx, ny)
+                        if dist > 0: nx /= dist; ny /= dist
+                        
+                        ray_len = 1500 if cheat_ray_of_hope else 150
+                        
+                        pygame.draw.line(game_surface, (255, 50, 50), target_ball_hit.position, (target_ball_hit.position.x + nx * ray_len, target_ball_hit.position.y + ny * ray_len), 3)
+                        
+                        tx, ty = -ny, nx
+                        if (tx * dx + ty * dy) < 0: tx, ty = -tx, -ty
+                        pygame.draw.line(game_surface, WHITE, (impact_x, impact_y), (impact_x + tx * ray_len, impact_y + ty * ray_len), 3)
                     
             elif hit_wall:
                 if hit_pocket:
                     pygame.draw.line(game_surface, (255, 50, 50), (impact_x - 12, impact_y - 12), (impact_x + 12, impact_y + 12), 6)
                     pygame.draw.line(game_surface, (255, 50, 50), (impact_x + 12, impact_y - 12), (impact_x - 12, impact_y + 12), 6)
                 else:
-                    pygame.draw.circle(game_surface, WHITE, (int(impact_x), int(impact_y)), ball_radius, 2)
-                    if wall_normal:
-                        dot_product = dx * wall_normal.x + dy * wall_normal.y
-                        rx = dx - 2 * dot_product * wall_normal.x
-                        ry = dy - 2 * dot_product * wall_normal.y
-                        pygame.draw.line(game_surface, WHITE, (impact_x, impact_y), (impact_x + rx * 150, impact_y + ry * 150), 3)
+                        pygame.draw.circle(game_surface, WHITE, (int(impact_x), int(impact_y)), ball_radius, 2)
+                        if wall_normal:
+                            dot_product = dx * wall_normal.x + dy * wall_normal.y
+                            rx = dx - 2 * dot_product * wall_normal.x
+                            ry = dy - 2 * dot_product * wall_normal.y
+                            
+                            ray_len = 1500 if cheat_ray_of_hope else 150
+                            pygame.draw.line(game_surface, WHITE, (impact_x, impact_y), (impact_x + rx * ray_len, impact_y + ry * ray_len), 3)
             
             draw_cue_stick(game_surface, cue_body.position, aim_angle, current_power)
             
@@ -1037,30 +1227,64 @@ while running:
                 pygame.draw.rect(game_surface, BLACK, (600, 140, 400, 20)) 
                 pygame.draw.rect(game_surface, (255, 0, 0), (600, 140, min(current_power / 15, 400), 20))
 
-        pygame.draw.rect(game_surface, BTN_BLUE, pause_btn, border_radius=10)
-        game_surface.blit(button_font.render("PAUSE", True, WHITE), button_font.render("PAUSE", True, WHITE).get_rect(center=pause_btn.center))
+        # --- DRAW HEADER UI (MINICLIP STYLE) ---
+        
+        # 1. Left: Pause Button
+        pygame.draw.rect(game_surface, BTN_BLUE, pause_btn, border_radius=15)
+        pygame.draw.rect(game_surface, WHITE, (pause_btn.centerx - 12, pause_btn.centery - 14, 8, 28), border_radius=2)
+        pygame.draw.rect(game_surface, WHITE, (pause_btn.centerx + 4, pause_btn.centery - 14, 8, 28), border_radius=2)
 
-        if ball_in_hand and not is_charging and game_over_msg == "" and not spin_popup_active:
-            bih = ui_font.render("BALL IN HAND", True, (255, 255, 0))
-            game_surface.blit(bih, bih.get_rect(center=(VIRTUAL_W//2, 45)))
+        # 2. Left-Center: P1 Avatar and Name
+        p1_color = (255, 255, 0) if turn == 1 else WHITE
+        draw_avatar(game_surface, VIRTUAL_W//2 - 180, 15, turn == 1, is_bot=False)
+        p1_name_surf = ui_font.render(p1_name, True, p1_color)
+        game_surface.blit(p1_name_surf, p1_name_surf.get_rect(topright=(VIRTUAL_W//2 - 200, 25)))
 
-        p1_color, p2_color = ((255, 255, 0) if turn == 1 else WHITE), ((255, 255, 0) if turn == 2 else WHITE)
-        game_surface.blit(ui_font.render(p1_name, True, p1_color), ui_font.render(p1_name, True, p1_color).get_rect(midleft=(260, 35)))
-        game_surface.blit(ui_font.render(p2_name, True, p2_color), ui_font.render(p2_name, True, p2_color).get_rect(midleft=(960, 35)))
+        # 3. Right-Center: P2 Avatar and Name
+        p2_color = (255, 255, 0) if turn == 2 else WHITE
+        draw_avatar(game_surface, VIRTUAL_W//2 + 100, 15, turn == 2, is_bot=(game_mode == "PvAI"))
+        p2_name_surf = ui_font.render(p2_name, True, p2_color)
+        game_surface.blit(p2_name_surf, p2_name_surf.get_rect(topleft=(VIRTUAL_W//2 + 200, 25)))
 
-        for p_type, offset in [(p1_type, 274), (p2_type, 974)]:
+        # 4. Render Pocketed Balls underneath Names
+        for p_type, align_right, offset in [(p1_type, True, VIRTUAL_W//2 - 215), (p2_type, False, VIRTUAL_W//2 + 215)]:
             if p_type:
                 target_nums = [1,2,3,4,5,6,7] if p_type == "Solids" else [9,10,11,12,13,14,15]
                 remaining = [n for n in target_nums if n not in global_pocketed_balls]
                 for idx, num in enumerate(remaining):
-                    draw_tiny_ball(game_surface, offset + (idx * 32), 65, BALL_COLORS[(num-1) % 7], p_type == "Stripes")
-                if not remaining and 8 not in global_pocketed_balls: draw_tiny_ball(game_surface, offset, 65, BLACK, False, True)
-            else: game_surface.blit(font.render("(Open Table)", True, GRAY), (offset - 14, 55))
+                    ball_x = offset - (idx * 32) if align_right else offset + (idx * 32)
+                    draw_tiny_ball(game_surface, ball_x, 75, BALL_COLORS[(num-1) % 7], p_type == "Stripes")
+                if not remaining and 8 not in global_pocketed_balls: 
+                    draw_tiny_ball(game_surface, offset, 75, BLACK, False, True)
+            else: 
+                txt = font.render("(Open Table)", True, GRAY)
+                if align_right:
+                    game_surface.blit(txt, txt.get_rect(topright=(VIRTUAL_W//2 - 200, 65)))
+                else:
+                    game_surface.blit(txt, txt.get_rect(topleft=(VIRTUAL_W//2 + 200, 65)))
 
+        # 5. Center: Game Mode Display
+        mode_box = pygame.Rect(VIRTUAL_W//2 - 75, 25, 150, 60)
+        pygame.draw.rect(game_surface, (20, 20, 20), mode_box, border_radius=12)
+        pygame.draw.rect(game_surface, (255, 215, 0), mode_box, 3, border_radius=12)
+        
+        display_mode = "PvP" if game_mode == "PVP" else "vs AI"
+        mode_text = button_font.render(display_mode, True, WHITE)
+        
+        # Offset Y by +3 pixels to account for the font's internal padding
+        text_rect = mode_text.get_rect(center=(mode_box.centerx, mode_box.centery + 3))
+        game_surface.blit(mode_text, text_rect)
+
+        # 6. Right: Spin UI
         pygame.draw.circle(game_surface, WHITE, spin_ui_center, spin_ui_radius)
         pygame.draw.circle(game_surface, GRAY, spin_ui_center, spin_ui_radius, 4) 
         pygame.draw.circle(game_surface, (255, 0, 0), (int(spin_ui_center[0] + (spin_x * spin_ui_radius)), int(spin_ui_center[1] + (spin_y * spin_ui_radius))), 6)
-        game_surface.blit(font.render("SPIN", True, WHITE), font.render("SPIN", True, WHITE).get_rect(center=(60, 95)))
+        game_surface.blit(font.render("SPIN", True, WHITE), font.render("SPIN", True, WHITE).get_rect(center=(spin_ui_center[0], spin_ui_center[1] + 45)))
+
+        # Ball In Hand overlay
+        if ball_in_hand and not is_charging and game_over_msg == "" and not spin_popup_active:
+            bih = ui_font.render("BALL IN HAND", True, (255, 255, 0))
+            game_surface.blit(bih, bih.get_rect(center=(VIRTUAL_W//2, 115))) # Shifted down to not block the mode box
 
         if alert_timer > 0:
             pygame.draw.rect(game_surface, (255, 100, 0), (500, 480, 600, 80), border_radius=20)
@@ -1119,6 +1343,14 @@ while running:
             game_surface.blit(button_font.render("RESTART MATCH", True, WHITE), button_font.render("RESTART MATCH", True, WHITE).get_rect(center=restart_btn.center))
             pygame.draw.rect(game_surface, BTN_RED, quit_menu_btn, border_radius=20)
             game_surface.blit(button_font.render("QUIT TO MENU", True, WHITE), button_font.render("QUIT TO MENU", True, WHITE).get_rect(center=quit_menu_btn.center))
+
+    # --- APPLY CURSOR ---
+    if is_dragging_cue:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_SIZEALL)
+    elif hovering_interactive:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+    else:
+        pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
     # --- Draw the Fade Overlay ---
     if ui_alpha > 0:
