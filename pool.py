@@ -6,24 +6,12 @@ import math
 pygame.init()
 VIRTUAL_W, VIRTUAL_H = 1600, 1000 
 
-# Fetch the native resolution of the monitor
+# Launch Windowed by default (completely fixes macOS transparency bugs)
 info = pygame.display.Info()
-current_width, current_height = info.current_w, info.current_h
+current_width, current_height = int(info.current_w * 0.8), int(info.current_h * 0.8)
 
-# Launch in Fullscreen mode
-RENDER_FLAGS = pygame.FULLSCREEN | pygame.DOUBLEBUF
+RENDER_FLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
-
-# --- macOS FULLSCREEN WARM-UP ---
-dummy_alpha = pygame.Surface((10, 10), pygame.SRCALPHA)
-dummy_alpha.fill((255, 255, 255, 128))
-for _ in range(15):
-    screen.fill((15, 20, 40)) # Matches the dark blue MENU_BG
-    screen.blit(dummy_alpha, (0, 0)) # Jumpstarts the GPU alpha pipeline
-    pygame.display.flip()
-    pygame.event.pump()
-    pygame.time.wait(50)
-# --------------------------------
 
 game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
 pygame.display.set_caption("8-Ball Pool 3D")
@@ -480,7 +468,18 @@ while running:
             screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
             
         elif event.type == pygame.KEYDOWN:
-            if game_state == "NAMES":
+            if event.key == pygame.K_f:
+                pygame.display.toggle_fullscreen() # Safely toggles fullscreen on/off
+            elif event.key == pygame.K_ESCAPE:
+                if game_state == "MENU":
+                    running = False # Safely exit the app from the Main Menu
+                elif game_state in ["MODE_SELECT", "NAMES"]:
+                    change_state("MENU")
+                elif game_state == "PLAYING" and game_over_msg == "":
+                    if spin_popup_active: spin_popup_active = False
+                    else: game_state = "PAUSED"
+                elif game_state == "PAUSED": game_state = "PLAYING"
+            elif game_state == "NAMES":
                 if event.key == pygame.K_RETURN:
                     if active_input == 1 and p1_name.strip() != "": 
                         if game_mode == "PvAI":
@@ -498,13 +497,6 @@ while running:
                     if event.unicode.isprintable():
                         if active_input == 1 and len(p1_name) < 12: p1_name += event.unicode
                         elif active_input == 2 and len(p2_name) < 12: p2_name += event.unicode
-            elif event.key == pygame.K_ESCAPE:
-                if game_state in ["MODE_SELECT", "NAMES"]:
-                    change_state("MENU")
-                elif game_state == "PLAYING" and game_over_msg == "":
-                    if spin_popup_active: spin_popup_active = False
-                    else: game_state = "PAUSED"
-                elif game_state == "PAUSED": game_state = "PLAYING"
             else:
                 # --- CHEAT CODE LISTENER ---
                 if game_state == "PLAYING" and event.unicode.isprintable():
