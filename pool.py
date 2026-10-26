@@ -13,7 +13,7 @@ current_width, current_height = int(info.current_w * 0.8), int(info.current_h * 
 RENDER_FLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
 
-game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
+game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert()
 pygame.display.set_caption("8-Ball Pool 3D")
 clock = pygame.time.Clock()
 
@@ -101,7 +101,7 @@ CUSHION_POLYS = [
 ]
 
 # --- GPU-ACCELERATED STATIC BACKGROUND CACHE ---
-table_bg = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
+table_bg = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert()
 
 def build_static_table_cache():
     table_bg.fill(HEADER_BG)
@@ -168,7 +168,7 @@ next_game_state = ""
 ui_alpha = 255
 fade_speed = 15
 
-fade_overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H))
+fade_overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert().alpha()
 fade_overlay.fill((0, 0, 0))
 
 def change_state(new_state):
@@ -203,10 +203,10 @@ aimbot_target_body = None
 aimbot_target_pos = None
 
 # --- GRAPHICS CACHING ---
-shadow_surf = pygame.Surface((ball_radius * 2, ball_radius * 2), pygame.SRCALPHA)
+shadow_surf = pygame.Surface((ball_radius * 2, ball_radius * 2), pygame.SRCALPHA).convert_alpha()
 pygame.draw.circle(shadow_surf, (0, 0, 0, 120), (ball_radius, ball_radius), ball_radius)
 
-highlight_surf = pygame.Surface((ball_radius * 2, ball_radius * 2), pygame.SRCALPHA)
+highlight_surf = pygame.Surface((ball_radius * 2, ball_radius * 2), pygame.SRCALPHA).convert_alpha()
 pygame.draw.circle(highlight_surf, (255, 255, 255, 70), (ball_radius - 6, ball_radius - 6), int(ball_radius * 0.5))
 pygame.draw.circle(highlight_surf, (255, 255, 255, 180), (ball_radius - 8, ball_radius - 8), int(ball_radius * 0.2))
 
@@ -215,7 +215,7 @@ rotated_ball_cache = {}
 
 def get_or_create_ball_surf(color, is_stripe, num):
     if num not in ball_cache:
-        surf = pygame.Surface((ball_radius*2, ball_radius*2), pygame.SRCALPHA)
+        surf = pygame.Surface((ball_radius*2, ball_radius*2), pygame.SRCALPHA).convert().alpha()
         if num == 0: 
             pygame.draw.circle(surf, WHITE, (ball_radius, ball_radius), ball_radius)
             pygame.draw.circle(surf, (200, 0, 0), (ball_radius, 6), 4)
@@ -306,7 +306,7 @@ def draw_tiny_ball(surf, x, y, color, is_stripe, is_8_ball=False):
     pygame.draw.circle(surf, (255, 255, 255, 200), (x - 4, y - 4), 4)
 
 def draw_avatar(surf, x, y, is_active, is_bot=False):
-    av_surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+    av_surf = pygame.Surface((80, 80), pygame.SRCALPHA).convert().alpha()
     pygame.draw.rect(av_surf, (90, 100, 110), (0, 0, 80, 80)) 
     
     if is_bot:
@@ -323,7 +323,7 @@ def draw_avatar(surf, x, y, is_active, is_bot=False):
         pygame.draw.circle(av_surf, (220, 220, 220), (40, 30), 20) 
         pygame.draw.circle(av_surf, (220, 220, 220), (40, 95), 50) 
     
-    mask = pygame.Surface((80, 80), pygame.SRCALPHA)
+    mask = pygame.Surface((80, 80), pygame.SRCALPHA).convert().alpha()
     pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, 80, 80), border_radius=12)
     av_surf.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
     
@@ -1295,7 +1295,7 @@ while running:
 
         # --- EXCLUSIVE OVERLAYS ---
         if game_over_msg:
-            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA)
+            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert().alpha()
             overlay.fill((0, 0, 0, 210)) 
             game_surface.blit(overlay, (0, 0))
             
@@ -1312,7 +1312,7 @@ while running:
             game_surface.blit(button_font.render("MAIN MENU", True, WHITE), button_font.render("MAIN MENU", True, WHITE).get_rect(center=win_menu_btn.center))
 
         elif spin_popup_active:
-            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA)
+            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert().alpha()
             overlay.fill((0, 0, 0, 210)) 
             game_surface.blit(overlay, (0, 0))
             
@@ -1333,7 +1333,7 @@ while running:
             game_surface.blit(button_font.render("DONE", True, WHITE), button_font.render("DONE", True, WHITE).get_rect(center=close_spin_btn.center))
 
         elif game_state == "PAUSED":
-            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA)
+            overlay = pygame.Surface((VIRTUAL_W, VIRTUAL_H), pygame.SRCALPHA).convert().alpha()
             overlay.fill((0, 0, 0, 180)) 
             game_surface.blit(overlay, (0, 0))
             
