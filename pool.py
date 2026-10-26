@@ -13,7 +13,7 @@ current_width, current_height = int(info.current_w * 0.8), int(info.current_h * 
 RENDER_FLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
 screen = pygame.display.set_mode((current_width, current_height), RENDER_FLAGS, vsync=1)
 
-game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert()
+game_surface = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert_alpha()
 pygame.display.set_caption("8-Ball Pool 3D")
 clock = pygame.time.Clock()
 
@@ -101,7 +101,7 @@ CUSHION_POLYS = [
 ]
 
 # --- GPU-ACCELERATED STATIC BACKGROUND CACHE ---
-table_bg = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert()
+table_bg = pygame.Surface((VIRTUAL_W, VIRTUAL_H)).convert_alpha()
 
 def build_static_table_cache():
     table_bg.fill(HEADER_BG)
@@ -1360,7 +1360,7 @@ while running:
         fade_overlay.set_alpha(ui_alpha)
         game_surface.blit(fade_overlay, (0, 0))
 
-    screen.fill((0, 0, 0)) 
+    screen.fill((15, 20, 40)) 
     screen.blit(pygame.transform.scale(game_surface, (scaled_w, scaled_h)), (offset_x, offset_y))
     
     pygame.display.flip()
